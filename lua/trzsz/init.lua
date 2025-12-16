@@ -15,50 +15,49 @@ function M.setup(opts)
 	local tsz_cmd = opts.tsz_cmd or "tsz"
 	local temp_log = opts.temp_log or "/tmp/trz.log"
 
-	-- Helper function to create floating terminal
-	local function create_float_terminal(cmd, title)
-		local ui = vim.api.nvim_list_uis()[1]
-		local win_width = math.floor(ui.width * 0.8)
-		local win_height = math.floor(ui.height * 0.8)
+	-- Helper function to create sidebar terminal
+	local function create_sidebar_terminal(cmd, title)
+		-- Create a vertical split
+		vim.cmd("vsplit")
+		local win = vim.api.nvim_get_current_win()
 
-		local buf = vim.api.nvim_create_buf(false, true)
-		local win = vim.api.nvim_open_win(buf, true, {
-			relative = "editor",
-			width = win_width,
-			height = win_height,
-			col = math.floor((ui.width - win_width) / 2),
-			row = math.floor((ui.height - win_height) / 2),
-			border = "rounded",
-			title = " " .. title .. " ",
-			title_pos = "center",
-			style = "minimal",
-		})
+		-- Set window width and fix it
+		vim.api.nvim_win_set_width(win, width)
+		vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
 
-		-- Set buffer options
-		vim.bo[buf].buftype = "terminal"
-		vim.bo[buf].buflisted = false
+		-- Open terminal and run command
+		vim.cmd("terminal " .. cmd)
 
-		-- Start terminal
-		local term_id = vim.fn.termopen(cmd, {
-			on_exit = function(_, exit_code, _)
-				vim.api.nvim_win_close(win, true)
-				if exit_code == 0 then
-					vim.notify(title .. " completed successfully", vim.log.levels.INFO)
-				else
-					vim.notify(title .. " failed with exit code: " .. exit_code, vim.log.levels.ERROR)
+		-- Set buffer options to hide from buffer tab
+		local buf = vim.api.nvim_get_current_buf()
+		vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+
+		-- Set up terminal key mappings for window navigation
+		local term_opts = { buffer = buf, silent = true }
+		vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h", term_opts)
+		vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j", term_opts)
+		vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", term_opts)
+		vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", term_opts)
+
+		-- Set up autocmd to enter terminal mode when entering terminal window
+		vim.api.nvim_create_autocmd("WinEnter", {
+			buffer = buf,
+			callback = function()
+				if vim.api.nvim_get_current_win() == win then
+					vim.cmd("startinsert")
 				end
 			end,
 		})
 
-		-- Enter terminal mode
+		-- Enter terminal mode immediately
 		vim.cmd("startinsert")
 
-		return { buf = buf, win = win, term_id = term_id }
+		return { buf = buf, win = win }
 	end
 
 	-- Create Trz command
 	vim.api.nvim_create_user_command("Trz", function()
-		local terminal = create_float_terminal(trz_cmd, "trz - Upload Files")
+		local terminal = create_sidebar_terminal(trz_cmd, "trz - Upload Files")
 
 		-- Set up autocmd to detect when trz completes and extract filenames
 		vim.api.nvim_create_autocmd("TermClose", {
@@ -99,11 +98,37 @@ function M.setup(opts)
 		end
 
 		local cmd = tsz_cmd .. " " .. files
-		create_float_terminal(cmd, "tsz - Download Files")
+		create_sidebar_terminal(cmd, "tsz - Download Files")
 	end, {
 		nargs = "*",
 		complete = "file",
 	})
+
+	-- Add autocommand to maintain width on window resize
+	vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
+		callback = function()
+			-- Get all windows
+			local wins = vim.api.nvim_list_wins()
+
+			-- If WinResized event, only check the resized windows
+			if vim.v.event and vim.v.event.windows then
+				wins = vim.v.event.windows or {}
+			end
+
+			for _, winid in ipairs(wins) do
+				if vim.api.nvim_win_is_valid(winid) then
+					local buf = vim.api.nvim_win_get_buf(winid)
+					if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
+						-- Check if this is a trzsz terminal (not listed in buffer list)
+						if not vim.api.nvim_get_option_value("buflisted", { buf = buf }) then
+							vim.api.nvim_win_set_width(winid, width)
+						end
+					end
+				end
+			end
+		end,
+	})
 end
 
 return M
+
