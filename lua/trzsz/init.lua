@@ -35,8 +35,8 @@ function M.setup(opts)
 		})
 
 		-- Set buffer options
-		vim.api.nvim_buf_set_option(buf, "buftype", "terminal")
-		vim.api.nvim_buf_set_option(buf, "buflisted", false)
+		vim.bo[buf].buftype = "terminal"
+		vim.bo[buf].buflisted = false
 
 		-- Start terminal
 		local term_id = vim.fn.termopen(cmd, {
