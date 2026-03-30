@@ -3,6 +3,7 @@ local M = {}
 ---@class TrzszOptions
 ---@field width? integer
 ---@field trz_cmd? string
+---@field tsz_cmd? string
 
 ---Setup function for trzsz.nvim
 ---@param opts? TrzszOptions
@@ -10,9 +11,9 @@ function M.setup(opts)
 	opts = opts or {}
 	local width = opts.width or 80
 	local trz_cmd = opts.trz_cmd or "trz"
+	local tsz_cmd = opts.tsz_cmd or "tsz"
 
-	-- Create Trz command
-	vim.api.nvim_create_user_command("Trz", function()
+	local function open_transfer_terminal(cmd)
 		-- Create a vertical split
 		vim.cmd("vsplit")
 		local win = vim.api.nvim_get_current_win()
@@ -21,8 +22,7 @@ function M.setup(opts)
 		vim.api.nvim_win_set_width(win, width)
 		vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
 
-		-- Open terminal and run trz command
-		vim.cmd("terminal " .. trz_cmd)
+		vim.cmd("terminal " .. cmd)
 
 		-- Set buffer options to hide from buffer tab
 		local buf = vim.api.nvim_get_current_buf()
@@ -35,7 +35,6 @@ function M.setup(opts)
 		vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", term_opts)
 		vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", term_opts)
 
-		-- Set up autocmd to enter terminal mode when entering trz terminal window
 		vim.api.nvim_create_autocmd("WinEnter", {
 			buffer = buf,
 			callback = function()
@@ -47,7 +46,25 @@ function M.setup(opts)
 
 		-- Enter terminal mode immediately
 		vim.cmd("startinsert")
+	end
+
+	-- Create Trz command
+	vim.api.nvim_create_user_command("Trz", function()
+		open_transfer_terminal(vim.fn.shellescape(trz_cmd))
 	end, {})
+
+	vim.api.nvim_create_user_command("Tsz", function(params)
+		local filename = vim.fn.fnamemodify(params.args, ":p")
+		if vim.fn.filereadable(filename) ~= 1 then
+			vim.notify("Tsz: file not found: " .. params.args, vim.log.levels.ERROR)
+			return
+		end
+
+		open_transfer_terminal(vim.fn.shellescape(tsz_cmd) .. " " .. vim.fn.shellescape(filename))
+	end, {
+		nargs = 1,
+		complete = "file",
+	})
 
 	-- Add autocommand to maintain width on window resize
 	vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
