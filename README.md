@@ -1,6 +1,6 @@
 # trzsz.nvim
 
-A Neovim plugin that provides seamless file transfer integration with [trzsz](https://github.com/trzsz/trzsz) through terminal windows in a vertical split.
+A Neovim plugin that provides seamless file transfer integration with [trzsz](https://github.com/trzsz/trzsz) through a transfer terminal opened in a top split.
 
 ## Commands
 
@@ -16,6 +16,7 @@ return {
   {
     "gitsang/trzsz.nvim",
     opts = {
+      height = 5,
       trz_cmd = "trz",
       tsz_cmd = "tsz -y",
       -- or argv style to avoid shell parsing issues:

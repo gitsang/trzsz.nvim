@@ -1,7 +1,7 @@
 local M = {}
 
 ---@class TrzszOptions
----@field width? integer
+---@field height? integer
 ---@field trz_cmd? string|string[]
 ---@field tsz_cmd? string|string[]
 
@@ -9,7 +9,7 @@ local M = {}
 ---@param opts? TrzszOptions
 function M.setup(opts)
 	opts = opts or {}
-	local width = opts.width or 80
+	local height = opts.height or 3
 	local trz_cmd = opts.trz_cmd or "trz"
 	local tsz_cmd = opts.tsz_cmd or "tsz"
 
@@ -33,13 +33,11 @@ function M.setup(opts)
 	end
 
 	local function open_transfer_terminal(cmd)
-		-- Create a vertical split
-		vim.cmd("vsplit")
+		vim.cmd("topleft split")
 		local win = vim.api.nvim_get_current_win()
 
-		-- Set window width and fix it
-		vim.api.nvim_win_set_width(win, width)
-		vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
+		vim.api.nvim_win_set_height(win, height)
+		vim.api.nvim_set_option_value("winfixheight", true, { win = win })
 
 		vim.cmd("terminal " .. cmd)
 
@@ -85,7 +83,6 @@ function M.setup(opts)
 		complete = "file",
 	})
 
-	-- Add autocommand to maintain width on window resize
 	vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
 		callback = function()
 			-- Get all windows
@@ -102,7 +99,7 @@ function M.setup(opts)
 					if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
 						-- Check if this is a trz terminal (not listed in buffer list)
 						if not vim.api.nvim_get_option_value("buflisted", { buf = buf }) then
-							vim.api.nvim_win_set_width(winid, width)
+							vim.api.nvim_win_set_height(winid, height)
 						end
 					end
 				end
