@@ -12,6 +12,7 @@ function M.setup(opts)
 	local height = opts.height or 5
 	local trz_cmd = opts.trz_cmd or "trz"
 	local tsz_cmd = opts.tsz_cmd or "tsz"
+	local augroup = vim.api.nvim_create_augroup("trzsz_nvim", { clear = true })
 
 	local function build_command(cmd, extra_args)
 		extra_args = extra_args or {}
@@ -38,6 +39,7 @@ function M.setup(opts)
 
 		vim.api.nvim_win_set_height(win, height)
 		vim.api.nvim_set_option_value("winfixheight", true, { win = win })
+		vim.w[win].trzsz_transfer_terminal = true
 
 		vim.cmd("terminal " .. cmd)
 
@@ -53,6 +55,7 @@ function M.setup(opts)
 		vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", term_opts)
 
 		vim.api.nvim_create_autocmd("WinEnter", {
+			group = augroup,
 			buffer = buf,
 			callback = function()
 				if vim.api.nvim_get_current_win() == win then
@@ -84,6 +87,7 @@ function M.setup(opts)
 	})
 
 	vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
+		group = augroup,
 		callback = function()
 			-- Get all windows
 			local wins = vim.api.nvim_list_wins()
@@ -95,10 +99,8 @@ function M.setup(opts)
 
 			for _, winid in ipairs(wins) do
 				if vim.api.nvim_win_is_valid(winid) then
-					local buf = vim.api.nvim_win_get_buf(winid)
-					if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
-						-- Check if this is a trz terminal (not listed in buffer list)
-						if not vim.api.nvim_get_option_value("buflisted", { buf = buf }) then
+					if vim.w[winid].trzsz_transfer_terminal then
+						if vim.api.nvim_win_get_height(winid) ~= height then
 							vim.api.nvim_win_set_height(winid, height)
 						end
 					end
