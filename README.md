@@ -18,6 +18,8 @@ return {
     opts = {
       trz_cmd = "trz",
       tsz_cmd = "tsz -y",
+      -- or argv style to avoid shell parsing issues:
+      -- tsz_cmd = { "tsz", "-y" },
     },
     cmd = { "Trz", "Tsz" },
     keys = {

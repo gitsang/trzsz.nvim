@@ -2,8 +2,8 @@ local M = {}
 
 ---@class TrzszOptions
 ---@field width? integer
----@field trz_cmd? string
----@field tsz_cmd? string
+---@field trz_cmd? string|string[]
+---@field tsz_cmd? string|string[]
 
 ---Setup function for trzsz.nvim
 ---@param opts? TrzszOptions
@@ -12,6 +12,25 @@ function M.setup(opts)
 	local width = opts.width or 80
 	local trz_cmd = opts.trz_cmd or "trz"
 	local tsz_cmd = opts.tsz_cmd or "tsz"
+
+	local function build_command(cmd, extra_args)
+		extra_args = extra_args or {}
+		local parts = {}
+
+		if type(cmd) == "table" then
+			for _, arg in ipairs(cmd) do
+				table.insert(parts, vim.fn.shellescape(arg))
+			end
+		else
+			table.insert(parts, cmd)
+		end
+
+		for _, arg in ipairs(extra_args) do
+			table.insert(parts, vim.fn.shellescape(arg))
+		end
+
+		return table.concat(parts, " ")
+	end
 
 	local function open_transfer_terminal(cmd)
 		-- Create a vertical split
@@ -50,7 +69,7 @@ function M.setup(opts)
 
 	-- Create Trz command
 	vim.api.nvim_create_user_command("Trz", function()
-		open_transfer_terminal(vim.fn.shellescape(trz_cmd))
+		open_transfer_terminal(build_command(trz_cmd))
 	end, {})
 
 	vim.api.nvim_create_user_command("Tsz", function(params)
@@ -60,7 +79,7 @@ function M.setup(opts)
 			return
 		end
 
-		open_transfer_terminal(vim.fn.shellescape(tsz_cmd) .. " " .. vim.fn.shellescape(filename))
+		open_transfer_terminal(build_command(tsz_cmd, { filename }))
 	end, {
 		nargs = 1,
 		complete = "file",
