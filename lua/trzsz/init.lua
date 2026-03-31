@@ -9,7 +9,7 @@ local M = {}
 ---@param opts? TrzszOptions
 function M.setup(opts)
 	opts = opts or {}
-	local height = opts.height or 3
+	local height = opts.height or 5
 	local trz_cmd = opts.trz_cmd or "trz"
 	local tsz_cmd = opts.tsz_cmd or "tsz"
 
